@@ -93,7 +93,15 @@ SELECT
   f_score,
   m_score,
   rfm_cell,
+  -- Orden de evaluación: de más específico a más general. Un CASE WHEN se
+  -- resuelve de arriba a abajo, así que cualquier regla "subset" debe ir
+  -- antes de su "superset" o se vuelve inalcanzable.
   CASE
+    -- Cannot Lose: top spenders históricos dormidos. Prioridad máxima de CRM.
+    -- Va ANTES que At Risk porque (r=1, fm>=4.5) es subset de (r<=2, fm>=3.5).
+    WHEN r_score = 1 AND fm_score >= 4.5 THEN 'Cannot Lose'
+    -- At Risk: compraban mucho, se fueron. Target #1 para reactivación.
+    WHEN r_score <= 2 AND fm_score >= 3.5 THEN 'At Risk'
     -- Champions: compran recientemente, seguido y gastan arriba del promedio
     WHEN r_score >= 4 AND fm_score >= 4.0 THEN 'Champions'
     -- Loyal: gastan bien y siguen activos, aunque no sean los más recientes
@@ -104,10 +112,6 @@ SELECT
     WHEN r_score = 5 AND fm_score <= 2.0 THEN 'New Customers'
     -- Promising: recientes, una compra, ticket modesto
     WHEN r_score = 4 AND fm_score <= 2.0 THEN 'Promising'
-    -- At Risk: compraban mucho, se fueron. Target #1 para reactivación.
-    WHEN r_score <= 2 AND fm_score >= 3.5 THEN 'At Risk'
-    -- Cannot Lose: top spenders históricos dormidos. Prioridad máxima de CRM.
-    WHEN r_score = 1 AND fm_score >= 4.5 THEN 'Cannot Lose'
     -- Hibernating: R bajo, valor medio. Campañas de win-back más baratas.
     WHEN r_score <= 2 AND fm_score BETWEEN 2.0 AND 3.4 THEN 'Hibernating'
     -- Lost: bajo en todo. No vale la pena reactivar, mejor no gastar.
