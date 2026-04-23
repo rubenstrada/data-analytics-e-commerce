@@ -523,6 +523,20 @@ Dependencias pinneadas en `requirements.txt` para Python 3.13. Para correrla hac
 
 Abre la [consola de BigQuery](https://console.cloud.google.com/bigquery) con cualquier proyecto de Google Cloud. El sandbox gratis alcanza. Asegúrate de tener acceso a `bigquery-public-data.thelook_ecommerce`, copia cualquier archivo de `sql_queries/` y córrelo. No hay parámetros que tocar; la fecha de "hoy" se resuelve desde el dataset. Cada query procesa menos de 1 GB.
 
+## Auditoría
+
+El proyecto se puede auditar sin pedirme datos ni credenciales. Todas las queries leen de `bigquery-public-data.thelook_ecommerce`, un dataset público de BigQuery.
+
+Para comprobar los resultados:
+
+1. Abrir BigQuery con cualquier proyecto de Google Cloud.
+2. Copiar una query de `sql_queries/`.
+3. Ejecutarla sin cambiar tablas ni parámetros.
+4. Comparar el output contra las tablas y lecturas del README.
+5. Para reconstruir el dashboard, conectar en Looker Studio las queries documentadas en [`dashboards/BUILD.md`](dashboards/BUILD.md).
+
+Los resultados pueden moverse ligeramente si Google actualiza el dataset público. Por eso las queries usan fechas derivadas del propio dataset y la notebook de validación trabaja con el último mes cerrado observable.
+
 ## Limitaciones
 
 El dataset no expone shipping, impuestos ni descuentos. Lo que llamo revenue es merchandise revenue, o sea `sale_price` sumado a nivel línea. No gross. Si alguien cruza esto con contabilidad real va a haber diferencia, y es esperado.
