@@ -1,1 +1,25 @@
+# outputs locales de las queries
 outputs/
+
+# credenciales GCP (nunca van al repo)
+*.json
+!package.json
+!package-lock.json
+.gcloud/
+application_default_credentials.json
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
