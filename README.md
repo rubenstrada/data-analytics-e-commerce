@@ -507,6 +507,16 @@ Un único reporte en Looker Studio, tres secciones sobre las queries que más tr
 
 Construcción, data sources, layout y filtros: [`dashboards/BUILD.md`](dashboards/BUILD.md).
 
+### Validación estadística (notebook)
+
+Tres números del README se auditan en [`notebooks/07_validation.ipynb`](notebooks/07_validation.ipynb) con herramientas que no son SQL, para que la lectura no dependa de un solo ángulo.
+
+- **Bootstrap del AOV** con 1000 réplicas sobre las órdenes del último mes cerrado. Devuelve un intervalo de confianza al 95% sin asumir normalidad, que es justo la asunción que rompe una cola de tickets caros.
+- **Test de dos proporciones** comparando la retención M1 entre la primera mitad y la segunda mitad de cohortes. Si el p-value se cae y el IC de la diferencia no cruza cero, el rebote de retención que muestra Q2 deja de ser lectura a ojo y pasa a ser un claim defendible.
+- **Heatmap de cohortes reconstruido en Python** con las últimas 12 cohortes de ≥100 clientes, como respaldo offline del triángulo que se publica en el dashboard.
+
+Dependencias pinneadas en `requirements.txt`. Para correrla hace falta ADC de GCP y un proyecto con facturación — cada query procesa bien debajo de 1 GB.
+
 ## Reproducir
 
 Abre la [consola de BigQuery](https://console.cloud.google.com/bigquery) con cualquier proyecto de Google Cloud. El sandbox gratis alcanza. Asegúrate de tener acceso a `bigquery-public-data.thelook_ecommerce`, copia cualquier archivo de `sql_queries/` y córrelo. No hay parámetros que tocar; la fecha de "hoy" se resuelve desde el dataset. Cada query procesa menos de 1 GB.
