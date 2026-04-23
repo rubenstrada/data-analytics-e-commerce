@@ -499,17 +499,13 @@ Archivo completo: [`sql_queries/06_product_affinity.sql`](sql_queries/06_product
 - Liquidar los top-100 SKUs de outerwear premium con >1,000 días de supply. Recortar el PO del próximo trimestre en esas categorías. El capital recuperado financia merchandising en las categorías en las que sí hay velocity.
 - No tomar decisiones de bundle ni cross-sell basadas en Q6. Re-correr sobre data real o dataset mayor antes de llevarlo a merchandising.
 
-## Dashboards
+## Dashboard
 
-Cinco vistas en Looker Studio sobre los outputs de las queries. Cada una apunta a un consumidor distinto (dirección, growth, CRO, CRM, ops + merchandising). No son cinco copias filtradas de la misma pantalla.
+Un único reporte en Looker Studio, tres secciones sobre las queries que más tracción tienen para una reunión ejecutiva: Overview del negocio (Q1), Retención por cohorte (Q2) y Segmentación RFM (Q4). Funnel e inventario viven mejor como output de SQL — en un dashboard se achican a un número plano y pierden la lectura.
 
-**Dashboard público:** _[PLACEHOLDER: URL de Looker Studio]_
+**Dashboard público:** _Se agrega al publicar. Preview en `dashboards/preview.png`._
 
-- `dashboards/01_overview.png` — revenue, órdenes, AOV, MoM
-- `dashboards/02_cohort_retention.png` — triángulo de cohortes
-- `dashboards/03_conversion_funnel.png` — drop-off por etapa
-- `dashboards/04_rfm_segmentation.png` — matriz de segmentos
-- `dashboards/05_inventory_affinity.png` — inventario + pares con mayor lift
+Construcción, data sources, layout y filtros: [`dashboards/BUILD.md`](dashboards/BUILD.md).
 
 ## Reproducir
 

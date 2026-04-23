@@ -1,19 +1,15 @@
-# Dashboards
+# Dashboard
 
-Cinco screenshots, un PDF, un archivo de links. Nada más vive acá.
+Un solo reporte en Looker Studio, tres secciones: Overview (Q1), Retención por cohorte (Q2), Segmentación RFM (Q4).
 
-- `01_overview.png` — revenue, órdenes, AOV, MoM
-- `02_cohort_retention.png` — triángulo de cohortes
-- `03_conversion_funnel.png` — drop-off por etapa
-- `04_rfm_segmentation.png` — matriz de segmentos
-- `05_inventory_affinity.png` — inventario + pares con mayor lift
+- `preview.png` — screenshot del reporte completo, 1600 px de ancho
+- `thelook_dashboard.pdf` — export a PDF para revisión offline
+- `LINKS.md` — URL público del reporte y vistas filtradas relevantes
 
-Exportados a 1600 px de ancho. Con menos, GitHub recomprime y los ejes quedan borrosos; con más, pesan de más sin ganancia visible.
-
-`thelook_dashboard.pdf` es el export completo del reporte (File → Download → PDF desde Looker), páginas en el mismo orden que los PNGs. Para quien quiera revisar offline, típicamente desde el teléfono.
-
-`LINKS.md` tiene el URL público del reporte en modo visualización, cualquier vista filtrada que valga la pena, y la fecha del snapshot detrás de los números.
+Construcción detallada (data sources, tiles, layout, filtros, formato): [`BUILD.md`](BUILD.md).
 
 ## Convenciones
 
-Los nombres de archivo son estables. Si una vista cambia, se sobreescribe el PNG; nada de `_v2`, para eso está git. Export limpio desde Looker, sin chrome del browser. El PDF se regenera completo cuando una vista cambia — un PDF con una página vieja al lado de una nueva es peor que no tenerlo.
+Los nombres de archivo son estables. Si el reporte cambia, se sobreescribe `preview.png` y se regenera `thelook_dashboard.pdf` completo — nada de `_v2`, para eso está git. Export limpio desde Looker, sin chrome del browser.
+
+Funnel (Q3) e inventario (Q5) no viven en el dashboard: en un tile se achican a un número plano y pierden la lectura. Quien quiera esa vista, corre el SQL. Es una decisión consciente, no una omisión.
