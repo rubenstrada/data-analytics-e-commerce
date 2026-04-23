@@ -511,11 +511,13 @@ Construcción, data sources, layout y filtros: [`dashboards/BUILD.md`](dashboard
 
 Tres números del README se auditan en [`notebooks/07_validation.ipynb`](notebooks/07_validation.ipynb) con herramientas que no son SQL, para que la lectura no dependa de un solo ángulo.
 
-- **Bootstrap del AOV** con 1000 réplicas sobre las órdenes del último mes cerrado. Devuelve un intervalo de confianza al 95% sin asumir normalidad, que es justo la asunción que rompe una cola de tickets caros.
-- **Test de dos proporciones** comparando la retención M1 entre la primera mitad y la segunda mitad de cohortes. Si el p-value se cae y el IC de la diferencia no cruza cero, el rebote de retención que muestra Q2 deja de ser lectura a ojo y pasa a ser un claim defendible.
-- **Heatmap de cohortes reconstruido en Python** con las últimas 12 cohortes de ≥100 clientes, como respaldo offline del triángulo que se publica en el dashboard.
+- **Bootstrap del AOV** sobre marzo 2026, el último mes cerrado antes del máximo del dataset (2026-04-27). Sobre 4,766 órdenes, el AOV observado fue **$85.51** y el IC bootstrap al 95% quedó en **[$82.96, $88.06]**.
+- **Test de dos proporciones** sobre cohortes maduras para M1, excluyendo cohortes cuyo mes siguiente todavía está parcial. La primera mitad retuvo **2.87%** en M1 (n=12,857) y la segunda mitad **5.08%** (n=46,680): diferencia **+2.21 pp**, IC 95% **[+1.86, +2.56] pp**, p-value < 0.001.
+- **Heatmap de cohortes reconstruido en Python** con las últimas 12 cohortes de ≥100 clientes y solo celdas observables hasta marzo 2026. Las celdas futuras o incompletas quedan vacías en vez de tratarse como cero.
 
-Dependencias pinneadas en `requirements.txt`. Para correrla hace falta ADC de GCP y un proyecto con facturación — cada query procesa bien debajo de 1 GB.
+![Heatmap de retención validado](dashboards/validation_retention_heatmap.png)
+
+Dependencias pinneadas en `requirements.txt` para Python 3.13. Para correrla hace falta ADC de GCP y un proyecto con facturación — cada query procesa bien debajo de 1 GB.
 
 ## Reproducir
 

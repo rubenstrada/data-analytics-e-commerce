@@ -2,9 +2,15 @@
 
 Un solo reporte en Looker Studio, tres secciones: Overview (Q1), Retención por cohorte (Q2), Segmentación RFM (Q4).
 
+Archivos esperados cuando se publique el dashboard:
+
 - `preview.png` — screenshot del reporte completo, 1600 px de ancho
 - `thelook_dashboard.pdf` — export a PDF para revisión offline
 - `LINKS.md` — URL público del reporte y vistas filtradas relevantes
+
+Artefacto de validación ya versionado:
+
+- `validation_retention_heatmap.png` — export limpio de la notebook de validación estadística
 
 Construcción detallada (data sources, tiles, layout, filtros, formato): [`BUILD.md`](BUILD.md).
 

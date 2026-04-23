@@ -10,7 +10,7 @@ Tres conectores, uno por sección. Cada uno es una query guardada en BigQuery qu
 
 | Source                | Query                                               | Grano                 | Refresh      |
 |-----------------------|-----------------------------------------------------|-----------------------|--------------|
-| `ds_overview`         | `sql_queries/01_overview_monthly.sql`               | mes (una fila)        | Daily cache  |
+| `ds_overview`         | `sql_queries/01_sales_kpis.sql`                     | mes (una fila)        | Daily cache  |
 | `ds_cohorts`          | `sql_queries/02_cohort_retention.sql`               | (cohorte, mes_since)  | Daily cache  |
 | `ds_rfm_customers`    | `sql_queries/04_rfm_segmentation.sql`               | cliente               | Daily cache  |
 
