@@ -1,8 +1,31 @@
 # E-Commerce Analytics — TheLook (BigQuery)
 
+![SQL](https://img.shields.io/badge/SQL-BigQuery-4285F4?logo=googlebigquery&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)
+![Looker Studio](https://img.shields.io/badge/Looker%20Studio-dashboard-4285F4?logo=looker&logoColor=white)
+![Dataset](https://img.shields.io/badge/dataset-thelook__ecommerce-0F9D58)
+
 En e-commerce, el número que termina en un deck rara vez es el número con el que decidirías algo. El AOV se calcula mal y te deja prometiendo un ticket que no existe. La retención se reporta agregada y no deja ver cuál cohorte está rota. El funnel se presenta sin distinguir canal y manda al equipo equivocado a resolver un problema que no es suyo. Son errores que cuestan credibilidad frente a dirección, y se repiten tanto que ya tienen patrón.
 
 Este repo son seis queries sobre `bigquery-public-data.thelook_ecommerce`, escritas como las querría ver antes de entregarle un dashboard a alguien.
+
+## Tabla de contenido
+
+- [Contexto del proyecto](#contexto-del-proyecto)
+- [La base de datos](#la-base-de-datos)
+- [Las seis preguntas](#las-seis-preguntas)
+- [Análisis y resultados](#análisis-y-resultados)
+  - [Q1. Crecimiento y AOV](#q1-estamos-creciendo-y-el-aov-aguanta)
+  - [Q2. Cohortes de retención](#q2-cómo-retienen-las-cohortes-y-dónde-se-fugan)
+  - [Q3. Funnel de conversión](#q3-dónde-del-funnel-se-pierde-la-gente)
+  - [Q4. Segmentación RFM](#q4-a-qué-clientes-hablarle-y-con-qué-mensaje)
+  - [Q5. Salud de inventario](#q5-qué-skus-están-comiendo-capital-y-cuáles-se-van-a-quedar-en-cero)
+  - [Q6. Market basket](#q6-qué-se-compra-con-qué)
+- [Hallazgos y recomendaciones](#hallazgos-y-recomendaciones)
+- [Dashboard](#dashboard)
+- [Validación estadística](#validación-estadística-notebook)
+- [Reproducir](#reproducir)
+- [Limitaciones](#limitaciones)
 
 ## Contexto del proyecto
 
@@ -52,20 +75,16 @@ Una fila por interacción web: `user_id`, `session_id`, `event_type` (home, depa
    └─────────────┘   └─────────────────┘
 ```
 
-## El brief
+## Las seis preguntas
 
-Imagina que el lunes bajó este mensaje de dirección comercial.
+Seis preguntas típicas de un review comercial mensual en D2C. Cada una se resuelve con una query. Abajo van embebidos el SQL, el resultado contra el snapshot actual de BigQuery, y la lectura de negocio.
 
-> Equipo, para el review del viernes necesito seis cosas resueltas. Las bajo ordenadas:
->
-> 1. ¿Estamos creciendo mes a mes? ¿El AOV aguanta o se nos está achicando el ticket?
-> 2. ¿Cómo retienen las cohortes nuevas? No quiero un promedio, quiero ver el decay mes a mes.
-> 3. ¿Dónde del funnel se cae la mayoría de la gente? Producto, carrito o checkout.
-> 4. Necesito pasarle a marketing una segmentación de clientes que sirva para retención, reactivación y upsell. Sin listas duras que se rompan en tres meses.
-> 5. ¿Qué SKUs están comiendo capital sin moverse? ¿Cuáles se van a quedar en cero?
-> 6. ¿Qué se compra con qué? Quiero dos o tres pares con evidencia suficiente para armar un bundle.
-
-Cada una de las seis preguntas se resuelve con un archivo SQL. Abajo van embebidos la query, el resultado (placeholder hasta que se corra contra el snapshot actual) y la lectura.
+1. ¿Estamos creciendo mes a mes y el AOV aguanta?
+2. ¿Cómo retienen las cohortes nuevas? Decay mes a mes, no promedio.
+3. ¿Dónde del funnel se cae la mayoría de la gente?
+4. ¿Qué segmentación de clientes le paso a marketing que no se rompa en tres meses?
+5. ¿Qué SKUs están comiendo capital sin moverse?
+6. ¿Qué se compra con qué? Pares con evidencia suficiente para un bundle.
 
 ## Análisis y resultados
 
@@ -106,22 +125,24 @@ ORDER BY order_month DESC;
 
 **Resultado** (últimos 12 meses):
 
-| order_month | orders | revenue      | aov    | units_per_order | revenue_mom_pct |
-| ----------- | -----: | -----------: | -----: | --------------: | --------------: |
-| 2026-04-01  | 6,685  | $577,321.66  | $86.36 | 1.46            | +48.95%         |
-| 2026-03-01  | 4,588  | $387,597.58  | $84.48 | 1.43            | +25.04%         |
-| 2026-02-01  | 3,572  | $309,984.62  | $86.78 | 1.42            | +2.00%          |
-| 2026-01-01  | 3,590  | $303,907.26  | $84.65 | 1.46            | +11.74%         |
-| 2025-12-01  | 3,216  | $271,968.85  | $84.57 | 1.42            | +7.22%          |
-| 2025-11-01  | 2,974  | $253,663.17  | $85.29 | 1.43            | +6.40%          |
-| 2025-10-01  | 2,866  | $238,395.35  | $83.18 | 1.42            | +2.04%          |
-| 2025-09-01  | 2,688  | $233,624.67  | $86.91 | 1.43            | +9.45%          |
-| 2025-08-01  | 2,492  | $213,449.07  | $85.65 | 1.42            | +6.43%          |
-| 2025-07-01  | 2,427  | $200,560.24  | $82.64 | 1.41            | +4.13%          |
-| 2025-06-01  | 2,294  | $192,597.77  | $83.96 | 1.44            | +2.44%          |
-| 2025-05-01  | 2,209  | $188,014.99  | $85.11 | 1.45            | +11.86%         |
+| order_month  | orders | revenue      | aov    | units_per_order | revenue_mom_pct |
+| ------------ | -----: | -----------: | -----: | --------------: | --------------: |
+| 2026-04-01 * | 6,856  | $584,702.54  | $85.28 | 1.47            | +49.36%         |
+| 2026-03-01   | 4,587  | $391,462.97  | $85.34 | 1.43            | +29.33%         |
+| 2026-02-01   | 3,537  | $302,682.46  | $85.58 | 1.43            | +2.84%          |
+| 2026-01-01   | 3,496  | $294,310.19  | $84.18 | 1.41            | +2.98%          |
+| 2025-12-01   | 3,296  | $285,800.45  | $86.71 | 1.43            | +16.58%         |
+| 2025-11-01   | 2,914  | $245,145.97  | $84.13 | 1.42            | +6.30%          |
+| 2025-10-01   | 2,724  | $230,620.34  | $84.66 | 1.45            | +8.60%          |
+| 2025-09-01   | 2,576  | $212,349.90  | $82.43 | 1.42            | +1.94%          |
+| 2025-08-01   | 2,558  | $208,303.48  | $81.43 | 1.41            | +1.63%          |
+| 2025-07-01   | 2,480  | $204,965.36  | $82.65 | 1.42            | +4.42%          |
+| 2025-06-01   | 2,222  | $196,294.42  | $88.34 | 1.43            | +1.95%          |
+| 2025-05-01   | 2,241  | $192,534.41  | $85.91 | 1.42            | +14.50%         |
 
-**Lectura:** revenue en abril 2026 cerró $577k con AOV $86.36, +49% MoM sobre marzo y +243% YoY sobre abril 2025. El AOV se mantiene en un rango estrecho de $76-$100 a lo largo de 88 meses (media $85.47); todo el crecimiento viene de volumen de órdenes (2,209 → 6,685 en 12 meses), no de ticket promedio. Caveat: el dataset genera fechas hasta 2026-04-26, cuatro días por delante del calendario real; la métrica es sobre 26 días de abril, no un mes parcial.
+\* abril 2026 es mes en curso: 27 de 30 días observados. El `+49% MoM` compara magnitudes absolutas contra un marzo cerrado, así que está inflado por el método. Normalizado a run-rate diario, abril corre a $21,656/día contra $12,628/día de marzo, **+71.5% en ritmo diario**. La extrapolación lineal al cierre daría ~$649k, no los $585k visibles hoy. Ambas métricas apuntan al alza; la conservadora es la segunda.
+
+**Lectura:** revenue en abril 2026 va en $585k con AOV $85.28. El AOV se mantiene en un rango estrecho de $81-$89 a lo largo de los últimos 12 meses (media $84.55); todo el crecimiento viene de volumen de órdenes (2,241 → 6,856 en 12 meses), no de ticket promedio. YoY contra abril 2025 ($168k, 2,066 órdenes) el revenue se multiplicó por 3.5x y las órdenes por 3.3x.
 
 Archivo completo: [`sql_queries/01_sales_kpis.sql`](sql_queries/01_sales_kpis.sql)
 
@@ -171,63 +192,76 @@ JOIN cohort_size c USING (cohort_month)
 ORDER BY a.cohort_month DESC, a.months_since_acquisition;
 ```
 
-**Resultado** (retención % a los N meses para las 8 cohortes completas más recientes):
+**Resultado** (retención % a los N meses, cohortes desde agosto 2025):
 
-| cohort      | size  | M0   | M1    | M2   | M3   | M4   | M5   |
-| ----------- | ----: | ---: | ----: | ---: | ---: | ---: | ---: |
-| 2026-03-01  | 2,646 | 100  | 10.05 | —    | —    | —    | —    |
-| 2026-02-01  | 2,100 | 100  | 9.00  | 6.81 | —    | —    | —    |
-| 2026-01-01  | 2,113 | 100  | 6.81  | 7.15 | 5.25 | —    | —    |
-| 2025-12-01  | 1,991 | 100  | 5.63  | 6.08 | 5.88 | 4.37 | —    |
-| 2025-11-01  | 1,790 | 100  | 4.25  | 5.08 | 4.69 | 5.64 | 3.24 |
-| 2025-10-01  | 1,786 | 100  | 4.48  | 4.37 | —    | —    | —    |
-| 2025-09-01  | 1,660 | 100  | 4.04  | —    | —    | —    | —    |
-| 2025-08-01  | 1,551 | 100  | 4.00  | —    | —    | —    | —    |
+| cohort        | size  | M0   | M1      | M2   | M3   | M4   | M5   | M6   |
+| ------------- | ----: | ---: | ------: | ---: | ---: | ---: | ---: | ---: |
+| 2026-04-01 †  | 4,073 | 100  | —       | —    | —    | —    | —    | —    |
+| 2026-03-01 *  | 2,646 | 100  | 10.51 * | —    | —    | —    | —    | —    |
+| 2026-02-01    | 2,070 | 100  | 9.13    | 6.96 | —    | —    | —    | —    |
+| 2026-01-01    | 2,093 | 100  | 7.26    | 6.59 | 5.26 | —    | —    | —    |
+| 2025-12-01    | 2,016 | 100  | 6.60    | 4.91 | 5.95 | 4.41 | —    | —    |
+| 2025-11-01    | 1,713 | 100  | 5.14    | 4.67 | 5.37 | 4.90 | 3.68 | —    |
+| 2025-10-01    | 1,666 | 100  | 4.56    | 4.92 | 4.32 | 4.68 | 4.86 | 2.82 |
+| 2025-09-01    | 1,614 | 100  | 3.47    | 4.28 | 3.78 | 4.40 | 3.66 | 3.53 |
+| 2025-08-01    | 1,613 | 100  | 2.79    | 3.10 | 4.53 | 3.78 | 3.22 | 3.29 |
 
-**Lectura:** la retención M1 subió de 2.9% (cohorte abril 2025) a 10.05% (cohorte marzo 2026), 3.5x en doce meses. No es ruido de cohorte única: las últimas seis cohortes mensuales muestran tendencia monótona al alza. El decay a M2-M5 sigue plano en 4-7%, así que el producto retiene consistentemente una vez capturado el primer mes — el cuello está en la primera recompra, no en la segunda ni la tercera. Una cohorte para auditar si hay canal roto: septiembre-agosto 2025 (4.0-4.04%), tocaron el piso antes del rebote.
+† 2026-04 está abierta (no completó M1 todavía). *2026-03* cerró su ventana M1 el 2026-04-27, o sea ~27 de 30 días observados; el 10.51 es piso, no valor final, y un z-test serio debería excluirla o ajustar por días.
 
-Nota. Las cohortes de los últimos meses se van a ver peor en el triángulo porque no han tenido tiempo de retener. Al graficar conviene recortarlas; en la tabla cruda se dejan, para que cualquiera que audite la query vea los datos completos.
+**Lectura:** la retención M1 subió de 2.5-3.4% (cohortes abril-julio 2025) a 7-9% en cohortes madurads de enero-febrero 2026, y el piso móvil de la curva M1 es monótono en las últimas siete cohortes con M1 cerrado. El decay M2-M6 queda plano en 3-6%, así que el producto retiene consistente una vez capturado el primer mes: el cuello es la primera recompra. Las cohortes agosto-septiembre 2025 (M1 = 2.79-3.47%) son las que tocaron piso antes del rebote y valen la auditoría fina (¿canal roto, promo que trajo cazadores, cambio de surtido?).
+
+Nota. El triángulo publicado en el dashboard recorta cohortes con M1 abierto para que la lectura visual no exagere el salto reciente; la tabla cruda las deja para que cualquiera que audite la query vea los datos completos con la marca de inmadurez.
 
 Archivo completo: [`sql_queries/02_cohort_retention.sql`](sql_queries/02_cohort_retention.sql)
 
 ### Q3. ¿Dónde del funnel se pierde la gente?
 
-Funnel de alcance por usuario: producto → carrito → compra. Un usuario cuenta en un paso si produjo al menos un evento de ese tipo en el log. Es una definición deliberada, no accidental: el funnel session-level responde otra pregunta (friction intra-sesión) y mezclar ambos en el mismo dashboard es cómo arrancan las discusiones improductivas entre product y growth.
+Funnel a nivel sesión: producto → carrito → compra. Una sesión cuenta en un paso si emitió al menos un evento de ese tipo, y las transiciones se evalúan en cadena (no se llega a purchase sin antes haber pasado por cart). Es una definición deliberada: el funnel a nivel usuario responde otra pregunta (alcance histórico) y sobre este dataset da 100% en los tres pasos porque el generador sintético emite todos los tipos de evento para cada usuario. El corte por sesión captura la fricción real de una visita.
 
 ```sql
-WITH user_stages AS (
+WITH session_stages AS (
   SELECT
-    COUNT(DISTINCT IF(event_type = 'product',  user_id, NULL)) AS product_viewers,
-    COUNT(DISTINCT IF(event_type = 'cart',     user_id, NULL)) AS cart_adders,
-    COUNT(DISTINCT IF(event_type = 'purchase', user_id, NULL)) AS purchasers
+    session_id,
+    MAX(IF(event_type = 'product',  1, 0)) AS saw_product,
+    MAX(IF(event_type = 'cart',     1, 0)) AS added_cart,
+    MAX(IF(event_type = 'purchase', 1, 0)) AS purchased
   FROM `bigquery-public-data.thelook_ecommerce.events`
+  GROUP BY session_id
+),
+
+funnel_totals AS (
+  SELECT
+    COUNTIF(saw_product = 1)                                      AS sessions_product,
+    COUNTIF(saw_product = 1 AND added_cart = 1)                   AS sessions_cart,
+    COUNTIF(saw_product = 1 AND added_cart = 1 AND purchased = 1) AS sessions_purchase
+  FROM session_stages
 )
 
 SELECT
-  product_viewers,
-  cart_adders,
-  purchasers,
-  ROUND(SAFE_DIVIDE(cart_adders, product_viewers) * 100, 2) AS product_to_cart_pct,
-  ROUND(SAFE_DIVIDE(purchasers,  cart_adders)     * 100, 2) AS cart_to_purchase_pct,
-  ROUND(SAFE_DIVIDE(purchasers,  product_viewers) * 100, 2) AS end_to_end_conv_pct,
-  (product_viewers - cart_adders)                          AS dropoff_product_to_cart,
-  (cart_adders     - purchasers)                           AS dropoff_cart_to_purchase
-FROM user_stages;
+  sessions_product,
+  sessions_cart,
+  sessions_purchase,
+  ROUND(SAFE_DIVIDE(sessions_cart,     sessions_product) * 100, 2) AS product_to_cart_pct,
+  ROUND(SAFE_DIVIDE(sessions_purchase, sessions_cart)    * 100, 2) AS cart_to_purchase_pct,
+  ROUND(SAFE_DIVIDE(sessions_purchase, sessions_product) * 100, 2) AS end_to_end_conv_pct,
+  (sessions_product - sessions_cart)     AS dropoff_product_to_cart,
+  (sessions_cart    - sessions_purchase) AS dropoff_cart_to_purchase
+FROM funnel_totals;
 ```
 
 **Resultado** (snapshot site-wide, sesiones acumulativas):
 
 | stage                 | sesiones | tasa vs stage previo | drop-off absoluto |
 | --------------------- | -------: | -------------------: | ----------------: |
-| Vieron producto       | 680,450  | —                    | —                 |
-| + Agregaron al carrito| 430,267  | 63.23%               | 250,183           |
-| + Compraron           | 180,450  | 41.94%               | 249,817           |
+| Vieron producto       | 681,540  |                      |                   |
+| + Agregaron al carrito| 431,724  | 63.35%               | 249,816           |
+| + Compraron           | 181,540  | 42.05%               | 250,184           |
 
-End-to-end (product → purchase): **26.52%**.
+End-to-end (product → purchase): **26.64%**.
 
-**Lectura:** el leak grande es checkout. Sesiones que agregan al carrito abandonan en 58% (más de una en dos), mientras que las que llegan al producto agregan al carrito en 63%. En volumen absoluto las dos transiciones se pierden ~250k sesiones cada una, pero en tasa la segunda es 1.5x peor, entonces el ROI de tocar checkout (pagos, shipping, account friction) es más alto que PDP. En una implementación real convendría separar el funnel por `traffic_source` para ver si la ruptura es uniforme o concentrada en un canal específico.
+**Lectura:** el leak grande es checkout. De las sesiones que llegan al carrito, apenas el 42% termina en compra (casi 58 de cada 100 abandonan el pago), mientras que la transición producto → carrito retiene 63%. En volumen absoluto las dos transiciones pierden ~250k sesiones cada una, pero en tasa la segunda es 1.5x peor; el ROI de tocar checkout (métodos de pago, shipping thresholds, guest checkout, dirección) es más alto que tocar PDP. En implementación real el siguiente corte sería segmentar el funnel por `traffic_source` para ver si la caída es uniforme o concentrada en un canal: eso decide si el problema es de producto o de calidad de tráfico.
 
-Nota metodológica. La primera versión de esta query contaba usuarios distintos por stage. En este dataset eso devuelve 100% en los tres — el generador sintético emite todos los tipos de evento para cada usuario, así que "usuarios únicos que alguna vez vieron producto / cart / purchase" coincide. La versión session-level es la correcta para leer friction real.
+Nota metodológica. La primera versión contaba usuarios distintos por stage y daba 100% en los tres porque el generador sintético emite todos los tipos de evento para cada usuario. La versión por sesión es la correcta para leer fricción real en una visita y es la que quedó en el archivo SQL.
 
 Archivo completo: [`sql_queries/03_conversion_funnel.sql`](sql_queries/03_conversion_funnel.sql)
 
@@ -267,14 +301,17 @@ SELECT
   user_id, recency_days, frequency, monetary,
   r_score, f_score, m_score,
   ROUND((f_score + m_score) / 2.0, 1) AS fm_score,
+  -- Orden de evaluación: de más específico a más general. Cannot Lose (r=1, fm>=4.5)
+  -- es subset estricto de At Risk (r<=2, fm>=3.5), así que si At Risk va primero
+  -- Cannot Lose queda inalcanzable y la segmentación pierde su bucket más caro.
   CASE
+    WHEN r_score = 1  AND (f_score + m_score) / 2.0 >= 4.5 THEN 'Cannot Lose'
+    WHEN r_score <= 2 AND (f_score + m_score) / 2.0 >= 3.5 THEN 'At Risk'
     WHEN r_score >= 4 AND (f_score + m_score) / 2.0 >= 4.0 THEN 'Champions'
     WHEN r_score >= 3 AND (f_score + m_score) / 2.0 >= 4.0 THEN 'Loyal'
     WHEN r_score >= 4 AND (f_score + m_score) / 2.0 BETWEEN 2.5 AND 3.9 THEN 'Potential Loyalists'
     WHEN r_score = 5  AND (f_score + m_score) / 2.0 <= 2.0 THEN 'New Customers'
     WHEN r_score = 4  AND (f_score + m_score) / 2.0 <= 2.0 THEN 'Promising'
-    WHEN r_score <= 2 AND (f_score + m_score) / 2.0 >= 3.5 THEN 'At Risk'
-    WHEN r_score = 1  AND (f_score + m_score) / 2.0 >= 4.5 THEN 'Cannot Lose'
     WHEN r_score <= 2 AND (f_score + m_score) / 2.0 BETWEEN 2.0 AND 3.4 THEN 'Hibernating'
     WHEN r_score <= 2 AND (f_score + m_score) / 2.0 <= 1.9 THEN 'Lost'
     ELSE 'Needs Attention'
@@ -287,18 +324,18 @@ ORDER BY monetary DESC;
 
 | segment             | customers | % base  | total monetary  | % revenue | avg monetary | avg recency (días) |
 | ------------------- | --------: | ------: | --------------: | --------: | -----------: | -----------------: |
-| Champions           | 10,568    | 16.03%  | $2,541,770.59   | 31.45%    | $240.52      | 113                |
-| Hibernating         | 11,618    | 17.62%  | $1,292,213.90   | 15.99%    | $111.23      | 1,126              |
-| Loyal               | 4,454     | 6.76%   | $1,086,001.29   | 13.44%    | $243.83      | 402                |
-| At Risk             | 5,206     | 7.90%   | $1,075,608.57   | 13.31%    | $206.61      | 862                |
-| Potential Loyalists | 11,348    | 17.22%  | $890,680.79     | 11.02%    | $78.49       | 128                |
-| Needs Attention     | 8,730     | 13.24%  | $539,793.47     | 6.68%     | $61.83       | 398                |
-| Cannot Lose         | 878       | 1.33%   | $262,045.30     | 3.24%     | $298.46      | 1,355              |
-| Lost                | 8,666     | 13.15%  | $244,392.84     | 3.02%     | $28.20       | 1,294              |
-| New Customers       | 3,942     | 5.98%   | $139,290.95     | 1.72%     | $35.34       | 29                 |
-| Promising           | 509       | 0.77%   | $9,725.12       | 0.12%     | $19.11       | 110                |
+| Champions           | 10,587    | 16.07%  | $2,517,084.39   | 31.27%    | $237.75      | 112                |
+| Hibernating         | 11,451    | 17.38%  | $1,276,355.97   | 15.86%    | $111.46      | 1,129              |
+| Loyal               | 4,460     | 6.77%   | $1,092,949.02   | 13.58%    | $245.06      | 407                |
+| At Risk             | 5,259     | 7.98%   | $1,064,450.62   | 13.23%    | $202.41      | 873                |
+| Potential Loyalists | 11,231    | 17.05%  | $892,060.44     | 11.08%    | $79.43       | 130                |
+| Needs Attention     | 8,717     | 13.23%  | $543,786.62     | 6.76%     | $62.38       | 401                |
+| Cannot Lose         | 917       | 1.39%   | $266,859.89     | 3.32%     | $291.01      | 1,332              |
+| Lost                | 8,729     | 13.25%  | $245,613.93     | 3.05%     | $28.14       | 1,288              |
+| New Customers       | 3,942     | 5.98%   | $137,632.31     | 1.71%     | $34.91       | 29                 |
+| Promising           | 594       | 0.90%   | $11,787.46      | 0.15%     | $19.84       | 113                |
 
-**Lectura:** Champions (16% de la base) concentra 31% del revenue — Pareto algo suave por un negocio todavía joven, no el 70/20 clásico. El hallazgo que cambia la campaña: Cannot Lose son solo 878 clientes pero tienen el **avg monetary más alto de la matriz ($298)** y llevan 1,355 días sin volver. Sumado a At Risk (5,206) y Hibernating (11,618) el target de reactivación son 17,702 clientes con $2.63M de valor histórico; eso es el presupuesto que un CRM podría justificar. New Customers (3,942) con 29 días de recency es el otro bucket accionable, del otro lado del funnel — onboarding, no win-back.
+**Lectura:** Champions (16% de la base) concentra 31% del revenue, Pareto algo más suave que el 70/20 típico por tratarse de un negocio todavía joven. El hallazgo que cambia la campaña de marketing: Cannot Lose son apenas 917 clientes pero tienen el **avg monetary más alto de la matriz ($291)** y llevan 1,332 días sin volver; ese bucket es la prioridad absoluta de reactivación. Sumando At Risk (5,259) y Hibernating (11,451) el target ampliado sube a 17,627 clientes con $2.61M de valor histórico, presupuesto defendible para CRM. New Customers (3,942) con 29 días de recency es el otro bucket accionable, del otro lado del funnel: onboarding, no win-back.
 
 Archivo completo: [`sql_queries/04_rfm_segmentation.sql`](sql_queries/04_rfm_segmentation.sql)
 
@@ -360,15 +397,15 @@ CROSS JOIN reference r
 ORDER BY oh.tied_up_capital DESC;
 ```
 
-**Resultado** — distribución por status sobre 29,042 SKUs:
+**Resultado** — distribución por status sobre 29,048 SKUs:
 
 | status      | SKUs    | tied-up capital |
 | ----------- | ------: | --------------: |
-| Overstock   | 15,430  | $5,253,774.04   |
-| Dead Stock  | 13,555  | $3,565,921.61   |
-| Healthy     | 57      | $1,741.95       |
-| At Risk     | 0       | —               |
-| Reorder Now | 0       | —               |
+| Overstock   | 15,617  | $5,288,096.63   |
+| Dead Stock  | 13,388  | $3,512,209.34   |
+| Healthy     | 43      | $2,688.81       |
+| At Risk     | 0       |                 |
+| Reorder Now | 0       |                 |
 
 Top 10 SKUs por capital estancado:
 
@@ -385,7 +422,7 @@ Top 10 SKUs por capital estancado:
 | 24201      | Men's Nike AirJordan Varsity Hoodie Jacket                    | Jordan         | 14    | $5,727    | 1,260          | Overstock  |
 | 23646      | Diesel Men's Lophophora Leather Jacket                        | Diesel         | 14    | $5,720    | 630            | Overstock  |
 
-**Lectura:** el top-10 está dominado por outerwear caro (North Face, Canada Goose, Arc'teryx, Diesel), con días de supply entre 480 y 2,160 — stock para varios años de venta al ritmo actual. Dead Stock acumula $3.57M en 13,555 SKUs, Overstock otros $5.25M. Atención: los thresholds por default (14/30/120 días) dejan apenas 57 SKUs en "Healthy" sobre 29k, y cero en "Reorder Now" o "At Risk". Eso no es inventario en crisis, es un threshold miscalibrado para este dataset sintético — la velocidad de ventas diaria por SKU es muy baja (mediana bajo 0.05 unidades/día), y los cortes en días de supply se disparan aritméticamente. En un caso real se parametriza por categoría o lead time, no hardcodeado. La lectura de negocio que sobrevive al caveat: $8.8M en capital parado entre las dos categorías no-healthy, concentrado en outerwear premium.
+**Lectura:** el top-10 está dominado por outerwear caro (North Face, Canada Goose, Arc'teryx, Diesel), con días de supply entre 480 y 2,160, stock para varios años al ritmo actual de venta. Dead Stock acumula $3.51M en 13,388 SKUs y Overstock otros $5.29M. Caveat: los thresholds por default (14/30/120 días) dejan apenas 43 SKUs en "Healthy" sobre ~29k, y cero en "Reorder Now" o "At Risk". Eso no es inventario en crisis, es un threshold miscalibrado para este dataset sintético: la velocidad diaria por SKU es muy baja (mediana por debajo de 0.05 unidades/día), y los cortes en días de supply se disparan aritméticamente. En producción se parametriza por categoría o por lead time del proveedor, no hardcodeado. La lectura de negocio que sobrevive al caveat: $8.8M en capital parado entre las dos categorías no-healthy, concentrado en outerwear premium.
 
 Archivo completo: [`sql_queries/05_inventory_health.sql`](sql_queries/05_inventory_health.sql)
 
@@ -470,8 +507,8 @@ Auditoría sobre el dataset para entender por qué:
 
 | métrica                                        | valor   |
 | ---------------------------------------------- | ------: |
-| Baskets multi-item (≥2 productos)              | 28,084  |
-| Pares de productos distintos observados        | 60,719  |
+| Baskets multi-item (≥2 productos)              | 28,258  |
+| Pares de productos distintos observados        | 61,222  |
 | Max co-ocurrencia de un par en todo el dataset | **2**   |
 | Pares con ≥5 co-ocurrencias                    | 0       |
 | Pares con ≥10 co-ocurrencias                   | 0       |
@@ -484,18 +521,18 @@ Archivo completo: [`sql_queries/06_product_affinity.sql`](sql_queries/06_product
 
 ### Hallazgos
 
-- El negocio creció 3.4x YoY en revenue (abril 2025 → abril 2026) y el AOV se mantuvo plano en $85 ± $10 durante 88 meses. Todo el upside está viniendo de volumen de órdenes, no de ticket.
-- La retención M1 pasó de 2.9% (cohorte abril 2025) a 10.05% (cohorte marzo 2026), tendencia monótona en las últimas seis cohortes. Retener después del primer mes es consistente, el cuello sigue estando en la primera recompra.
-- El leak más grande del funnel está en cart → purchase: 58% abandona el carrito, vs 37% que abandona antes de agregarlo. Checkout pesa más que PDP para este negocio.
-- Champions (16%) concentra 31% del revenue. Cannot Lose son 878 clientes con avg monetary $298 — el más alto de toda la matriz — y 1,355 días sin comprar. Reactivación target total (At Risk + Cannot Lose + Hibernating): 17,702 clientes, $2.63M de valor histórico.
-- $8.8M de capital estancado entre Overstock ($5.25M, 15,430 SKUs) y Dead Stock ($3.57M, 13,555 SKUs), concentrado en outerwear premium (North Face, Canada Goose, Arc'teryx). Los thresholds por default sobreclasifican dado el ritmo de ventas sintético — la cifra es real, la taxonomía "0 SKUs en Reorder Now" no lo es.
-- El dataset no sostiene una conclusión de market basket. Max co-ocurrencia de cualquier par = 2 sobre 60,719 pares observados. Cualquier recomendación de bundle basada en este dataset sería ruido.
+- El negocio creció 3.5x YoY en revenue (abril 2025 → abril 2026 en run-rate diario normalizado) y el AOV se mantuvo plano en $85 ± $5 a lo largo de los últimos 12 meses. Todo el upside viene de volumen de órdenes, no de ticket.
+- La retención M1 pasó de 2.5-3.4% en cohortes abril-julio 2025 a 7-9% en cohortes cerradas de enero-febrero 2026. Un z-test sobre cohortes maduras da +1.91 pp de mejora con IC 95% [+1.55, +2.27] y p-value ≈ 0: el rebote es real, no ruido de muestreo. El cuello sigue siendo la primera recompra; M2-M6 es plano en 3-6%.
+- El leak más grande del funnel está en cart → purchase: 58% abandona el carrito contra 37% que abandona antes de agregarlo. Checkout pesa más que PDP en términos de tasa de mejora alcanzable.
+- Champions (16%) concentra 31% del revenue. Cannot Lose son 917 clientes con avg monetary $291 (el más alto de toda la matriz) y 1,332 días sin comprar. Reactivación target total (At Risk + Cannot Lose + Hibernating): 17,627 clientes, $2.61M de valor histórico.
+- $8.8M de capital estancado entre Overstock ($5.29M, 15,617 SKUs) y Dead Stock ($3.51M, 13,388 SKUs), concentrado en outerwear premium (North Face, Canada Goose, Arc'teryx). Los thresholds por default sobreclasifican dado el ritmo de ventas sintético: la cifra es real, la taxonomía "0 SKUs en Reorder Now" no lo es.
+- El dataset no sostiene una conclusión de market basket. Max co-ocurrencia de cualquier par = 2 sobre 61,222 pares observados. Cualquier recomendación de bundle basada en este dataset sería ruido.
 
 ### Recomendaciones
 
 - Priorizar un experimento A/B en checkout (métodos de pago, shipping thresholds, guest checkout) antes que en PDP. El leak del 58% ahí tiene 1.5x el margen de mejora en tasa que el paso anterior.
-- Armar una cola CRM con los 878 Cannot Lose como prioridad absoluta, At Risk (5,206) como segunda ola. Presupuesto anclado en $262k de valor histórico solo de Cannot Lose.
-- Investigar por qué las cohortes de Q3 2025 (retención M1 de 3.8-4.0%) tocaron el piso justo antes del rebote. Si el driver fue un canal de adquisición específico, apagarlo; si fue cambio de producto, documentarlo para no repetirlo.
+- Armar una cola CRM con los 917 Cannot Lose como prioridad absoluta, At Risk (5,259) como segunda ola. Presupuesto anclado en $267k de valor histórico sólo de Cannot Lose.
+- Investigar por qué las cohortes de agosto-septiembre 2025 (retención M1 de 2.8-3.5%) tocaron el piso antes del rebote. Si el driver fue un canal específico, apagarlo; si fue cambio de producto, documentarlo para no repetirlo.
 - Liquidar los top-100 SKUs de outerwear premium con >1,000 días de supply. Recortar el PO del próximo trimestre en esas categorías. El capital recuperado financia merchandising en las categorías en las que sí hay velocity.
 - No tomar decisiones de bundle ni cross-sell basadas en Q6. Re-correr sobre data real o dataset mayor antes de llevarlo a merchandising.
 
@@ -511,8 +548,8 @@ Construcción, data sources, layout y filtros: [`dashboards/BUILD.md`](dashboard
 
 Tres números del README se auditan en [`notebooks/07_validation.ipynb`](notebooks/07_validation.ipynb) con herramientas que no son SQL, para que la lectura no dependa de un solo ángulo.
 
-- **Bootstrap del AOV** sobre marzo 2026, el último mes cerrado antes del máximo del dataset (2026-04-27). Sobre 4,766 órdenes, el AOV observado fue **$85.51** y el IC bootstrap al 95% quedó en **[$82.96, $88.06]**.
-- **Test de dos proporciones** sobre cohortes maduras para M1, excluyendo cohortes cuyo mes siguiente todavía está parcial. La primera mitad retuvo **2.87%** en M1 (n=12,857) y la segunda mitad **5.08%** (n=46,680): diferencia **+2.21 pp**, IC 95% **[+1.86, +2.56] pp**, p-value < 0.001.
+- **Bootstrap del AOV** sobre marzo 2026, el último mes cerrado antes del máximo del dataset (2026-04-27). Sobre 4,587 órdenes, el AOV observado fue **$85.34** y el IC bootstrap al 95% (1000 réplicas) quedó en **[$82.75, $87.91]**. Intervalo de ~$5 sobre un AOV de ~$85: la métrica es estable, no depende de outliers de ticket alto.
+- **Test de dos proporciones** sobre cohortes maduras para M1, excluyendo las dos últimas (abril 2026 sin M1 observado y marzo 2026 con M1 parcial). La primera mitad retuvo **3.06%** en M1 (n=12,750) y la segunda mitad **4.97%** (n=46,268): diferencia **+1.91 pp**, IC 95% **[+1.55, +2.27] pp**, z=9.17, p-value ≈ 0. El rebote es real y no depende de una cohorte única.
 - **Heatmap de cohortes reconstruido en Python** con las últimas 12 cohortes de ≥100 clientes y solo celdas observables hasta marzo 2026. Las celdas futuras o incompletas quedan vacías en vez de tratarse como cero.
 
 ![Heatmap de retención validado](dashboards/validation_retention_heatmap.png)
@@ -522,6 +559,8 @@ Dependencias pinneadas en `requirements.txt` para Python 3.13. Para correrla hac
 ## Reproducir
 
 Abre la [consola de BigQuery](https://console.cloud.google.com/bigquery) con cualquier proyecto de Google Cloud. El sandbox gratis alcanza. Asegúrate de tener acceso a `bigquery-public-data.thelook_ecommerce`, copia cualquier archivo de `sql_queries/` y córrelo. No hay parámetros que tocar; la fecha de "hoy" se resuelve desde el dataset. Cada query procesa menos de 1 GB.
+
+Nota sobre Q6. El archivo `06_product_affinity.sql` empieza con un `DECLARE min_pair_orders INT64 DEFAULT 30;`. Eso es un script de BigQuery, no una query single-statement, así que hay que ejecutarlo desde la consola web o con `bq query --use_legacy_sql=false < 06_product_affinity.sql` como script; `bq query` con el SQL por stdin single-statement falla. Para correrlo todo junto desde terminal está [`scripts/run_all.sh`](scripts/run_all.sh), que preprocesa Q6 para el CLI.
 
 ## Auditoría
 
