@@ -3,7 +3,7 @@
    -----------------------------------------------------------------------------
    Retención por cohorte de adquisición mensual.
 
-   Dataset : bigquery-public-data.thelook_ecommerce
+   Dataset : bigquery-public-data.thelook_ecommerce.order_items
    Grano   : (cohort_month, months_since_acquisition)
    Métrica : retention_rate = usuarios_activos_en_mes / tamaño_cohorte
 
@@ -21,13 +21,24 @@
    sido observadas lo suficiente. Al graficar el triángulo de retención
    siempre recortar las cohortes incompletas para no sacar conclusiones
    falsas.
+
+   Por qué order_items y no orders
+   --------------------------------
+   Las queries Q1, Q4 y Q5 trabajan a nivel línea (order_items), filtrando
+   Cancelled/Returned sobre esa tabla. Leer cohortes desde orders con el
+   mismo filtro no es equivalente: una orden puede quedar en status
+   Cancelled a nivel header aunque alguna línea haya sido shipped, y el
+   denominador de la cohorte se mueve. Alinear la fuente a order_items
+   evita que el dashboard cuadre con dos definiciones distintas de revenue
+   y hace que el tamaño de cohorte sea consistente con el count de clientes
+   activos de Q1.
 ============================================================================= */
 
 WITH first_purchase AS (
   SELECT
     user_id,
     DATE_TRUNC(DATE(MIN(created_at)), MONTH) AS cohort_month
-  FROM `bigquery-public-data.thelook_ecommerce.orders`
+  FROM `bigquery-public-data.thelook_ecommerce.order_items`
   WHERE status NOT IN ('Cancelled', 'Returned')
   GROUP BY user_id
 ),
@@ -37,14 +48,14 @@ activity AS (
   SELECT
     fp.cohort_month,
     DATE_DIFF(
-      DATE_TRUNC(DATE(o.created_at), MONTH),
+      DATE_TRUNC(DATE(oi.created_at), MONTH),
       fp.cohort_month,
       MONTH
     ) AS months_since_acquisition,
-    COUNT(DISTINCT o.user_id) AS active_users
-  FROM `bigquery-public-data.thelook_ecommerce.orders` o
+    COUNT(DISTINCT oi.user_id) AS active_users
+  FROM `bigquery-public-data.thelook_ecommerce.order_items` oi
   JOIN first_purchase fp USING (user_id)
-  WHERE o.status NOT IN ('Cancelled', 'Returned')
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
   GROUP BY cohort_month, months_since_acquisition
 ),
 
