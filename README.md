@@ -192,20 +192,20 @@ ORDER BY a.cohort_month DESC, a.months_since_acquisition;
 
 **Resultado** (retención % a los N meses, cohortes desde agosto 2025):
 
-| cohort        | size  | M0   | M1   | M2   | M3   | M4   | M5   | M6   |
-| ------------- | ----: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 2026-04-01 †  | 4,073 | 100  | —    | —    | —    | —    | —    | —    |
-| 2026-02-01    | 2,070 | 100  | 9.00 | 6.96 | —    | —    | —    | —    |
-| 2026-01-01    | 2,093 | 100  | 7.26 | 6.59 | 5.26 | —    | —    | —    |
-| 2025-12-01    | 2,016 | 100  | 6.60 | 4.91 | 5.95 | 4.41 | —    | —    |
-| 2025-11-01    | 1,713 | 100  | 5.14 | 4.67 | 5.37 | 4.90 | 3.68 | —    |
-| 2025-10-01    | 1,666 | 100  | 4.56 | 4.92 | 4.32 | 4.68 | 4.86 | 2.82 |
-| 2025-09-01    | 1,614 | 100  | 3.47 | 4.28 | 3.78 | 4.40 | 3.66 | 3.53 |
-| 2025-08-01    | 1,613 | 100  | 2.79 | 3.10 | 4.53 | 3.78 | 3.22 | 3.29 |
+| cohort        | size  | M0   | M1    | M2   | M3   | M4   | M5   | M6   |
+| ------------- | ----: | ---: | ----: | ---: | ---: | ---: | ---: | ---: |
+| 2026-04-01 †  | 4,522 | 100  | —     | —    | —    | —    | —    | —    |
+| 2026-02-01    | 2,035 | 100  | 11.94 | 8.50 | —    | —    | —    | —    |
+| 2026-01-01    | 2,106 | 100  | 7.36  | 6.93 | 6.89 | —    | —    | —    |
+| 2025-12-01    | 1,948 | 100  | 8.47  | 5.18 | 5.54 | 4.88 | —    | —    |
+| 2025-11-01    | 1,820 | 100  | 6.04  | 4.89 | 4.40 | 5.60 | 4.45 | —    |
+| 2025-10-01    | 1,728 | 100  | 5.96  | 3.99 | 5.32 | 3.47 | 3.82 | 4.11 |
+| 2025-09-01    | 1,597 | 100  | 6.32  | 3.57 | 4.45 | 4.01 | 4.20 | 4.51 |
+| 2025-08-01    | 1,621 | 100  | 6.48  | 3.95 | 4.07 | 3.89 | 3.45 | 3.02 |
 
 † 2026-04 está abierta, sin M1 observable. Cohortes inmaduras (marzo 2026 en adelante) omitidas porque su M1 todavía no se observó completo. Tabla extendida en `outputs/02_cohort_retention.csv`.
 
-**Lectura:** la retención M1 subió de 2.90% (cohorte abril 2025) a 9.00% (cohorte febrero 2026, último mes con M1 maduro), y el piso móvil de la curva M1 es monótono en las últimas siete cohortes con M1 cerrado. El decay M2-M6 queda plano en 3-6%, así que el producto retiene consistente una vez capturado el primer mes: el cuello es la primera recompra. Las cohortes agosto-septiembre 2025 (M1 = 2.79-3.47%) son las que tocaron piso antes del rebote y valen la auditoría fina (¿canal roto, promo que trajo cazadores, cambio de surtido?).
+**Lectura:** la retención M1 subió de 5.00% (cohorte abril 2025) a 11.94% (cohorte febrero 2026, último mes con M1 maduro). El decay M2-M6 queda plano en 3-9%, así que el producto retiene consistente una vez capturado el primer mes: el cuello es la primera recompra. Las cohortes septiembre-octubre 2025 (M1 ≈ 6%) son las de menor rebote y valen la auditoría fina (¿canal roto, promo que trajo cazadores, cambio de surtido?).
 
 Nota. El triángulo publicado en el dashboard recorta cohortes con M1 abierto para que la lectura visual no exagere el salto reciente; la tabla cruda las deja para que cualquiera que audite la query vea los datos completos con la marca de inmadurez.
 
@@ -249,15 +249,15 @@ FROM funnel_totals;
 
 **Resultado** (snapshot site-wide, sesiones acumulativas):
 
-| stage                 | sesiones | tasa vs stage previo | drop-off absoluto |
-| --------------------- | -------: | -------------------: | ----------------: |
-| Vieron producto       | 681,540  |                      |                   |
-| + Agregaron al carrito| 431,724  | 63.35%               | 249,816           |
-| + Compraron           | 181,540  | 42.05%               | 250,184           |
+| stage                  | sesiones | tasa vs stage previo | drop-off absoluto |
+| ---------------------- | -------: | -------------------: | ----------------: |
+| Vieron producto        | 681,633  |                      |                   |
+| + Agregaron al carrito | 431,349  | 63.28%               | 250,284           |
+| + Compraron            | 181,633  | 42.11%               | 249,716           |
 
-End-to-end (product → purchase): **26.64%**.
+End-to-end (product → purchase): **26.65%**.
 
-**Lectura:** el leak grande es checkout. De las sesiones que llegan al carrito, apenas el 42% termina en compra (casi 58 de cada 100 abandonan el pago), mientras que la transición producto → carrito retiene 63%. En volumen absoluto las dos transiciones pierden ~250k sesiones cada una, pero en tasa la segunda es 1.5x peor; el ROI de tocar checkout (métodos de pago, shipping thresholds, guest checkout, dirección) es más alto que tocar PDP. En implementación real el siguiente corte sería segmentar el funnel por `traffic_source` para ver si la caída es uniforme o concentrada en un canal: eso decide si el problema es de producto o de calidad de tráfico.
+**Lectura:** el leak grande es checkout. De las sesiones que llegan al carrito, apenas el 42.11% termina en compra (casi 58 de cada 100 abandonan el pago), mientras que la transición producto → carrito retiene 63.28%. En volumen absoluto las dos transiciones pierden ~250k sesiones cada una, pero en tasa la segunda es 1.5x peor; el ROI de tocar checkout (métodos de pago, shipping thresholds, guest checkout, dirección) es más alto que tocar PDP. En implementación real el siguiente corte sería segmentar el funnel por `traffic_source` para ver si la caída es uniforme o concentrada en un canal: eso decide si el problema es de producto o de calidad de tráfico.
 
 Nota metodológica. La primera versión contaba usuarios distintos por stage y daba 100% en los tres porque el generador sintético emite todos los tipos de evento para cada usuario. La versión por sesión es la correcta para leer fricción real en una visita y es la que quedó en el archivo SQL.
 
@@ -406,32 +406,32 @@ CROSS JOIN thresholds th
 ORDER BY oh.tied_up_capital DESC;
 ```
 
-**Resultado** — distribución por status sobre 29,048 SKUs:
+**Resultado** — distribución por status sobre 29,049 SKUs (thresholds dinámicos: p10/p25/p75 del catálogo):
 
-| status      | SKUs    | tied-up capital |
-| ----------- | ------: | --------------: |
-| Overstock   | 15,617  | $5,288,096.63   |
-| Dead Stock  | 13,388  | $3,512,209.34   |
-| Healthy     | 43      | $2,688.81       |
-| At Risk     | 0       |                 |
-| Reorder Now | 0       |                 |
+| status      | SKUs   | tied-up capital  |
+| ----------- | -----: | ---------------: |
+| Dead Stock  | 13,401 | $3,606,047.17    |
+| Healthy     | 7,302  | $2,432,002.28    |
+| Overstock   | 3,556  | $1,640,084.72    |
+| At Risk     | 3,638  | $963,189.44      |
+| Reorder Now | 1,152  | $211,658.56      |
 
 Top 10 SKUs por capital estancado:
 
-| product_id | nombre                                                        | marca          | units | tied-up   | days_of_supply | status     |
-| ---------: | ------------------------------------------------------------- | -------------- | ----: | --------: | -------------: | ---------- |
-| 17094      | The North Face Apex Bionic Soft Shell Jacket - Men's          | The North Face | 22    | $11,542   | 660            | Overstock  |
-| 24042      | Canada Goose Men's Langford Parka                             | Canada Goose   | 24    | $7,205    | 2,160          | Overstock  |
-| 10453      | NIKE WOMEN'S PRO Compression Sports Bra                       | Nike           | 14    | $7,168    | 1,260          | Overstock  |
-| 22812      | Quiksilver Men's Rockefeller Walkshort                        | Quiksilver     | 15    | $7,084    | —              | Dead Stock |
-| 23654      | The North Face Apex Bionic Soft Shell Jacket - Men's          | The North Face | 19    | $6,897    | 1,710          | Overstock  |
-| 23811      | Arc'teryx Men's Beta AR Jacket                                | Arc'teryx      | 28    | $6,504    | 1,260          | Overstock  |
-| 24428      | The North Face Apex Bionic Mens Soft Shell Ski Jacket 2013    | The North Face | 15    | $6,298    | 1,350          | Overstock  |
-| 8429       | The North Face Women's S-XL Oso Jacket                        | The North Face | 16    | $6,054    | 480            | Overstock  |
-| 24201      | Men's Nike AirJordan Varsity Hoodie Jacket                    | Jordan         | 14    | $5,727    | 1,260          | Overstock  |
-| 23646      | Diesel Men's Lophophora Leather Jacket                        | Diesel         | 14    | $5,720    | 630            | Overstock  |
+| product_id | nombre                                                     | marca          | units | tied-up  | days_of_supply | status     |
+| ---------: | ---------------------------------------------------------- | -------------- | ----: | -------: | -------------: | ---------- |
+| 17094      | The North Face Apex Bionic Soft Shell Jacket - Men's       | The North Face | 23    | $12,067  | —              | Dead Stock |
+| 24110      | Woolrich Arctic Parka DF                                   | Woolrich       | 21    | $10,042  | 945            | Healthy    |
+| 24428      | The North Face Apex Bionic Mens Soft Shell Ski Jacket 2013 | The North Face | 22    | $9,238   | 1,980          | Overstock  |
+| 24283      | The North Face Nuptse 2 Jacket - Noah Green/TNF Black      | The North Face | 23    | $8,515   | 2,070          | Overstock  |
+| 24447      | Darla                                                      | Alpha Ind.     | 20    | $8,092   | 1,800          | Overstock  |
+| 18062      | The North Face Apex Bionic Soft Shell Jacket - Men's       | The North Face | 20    | $7,838   | —              | Dead Stock |
+| 8721       | Nobis Merideth Parka                                       | Nobis          | 19    | $7,266   | 1,710          | Overstock  |
+| 8429       | The North Face Women's S-XL Oso Jacket                     | The North Face | 18    | $6,810   | —              | Dead Stock |
+| 24899      | Nike Jordan Retro 11 Bred Bootie Socks                     | Jordan         | 12    | $6,686   | 1,080          | Healthy    |
+| 24341      | Nobis Yatesy Parka                                         | Nobis          | 17    | $6,492   | —              | Dead Stock |
 
-**Lectura:** el top-10 está dominado por outerwear caro (North Face, Canada Goose, Arc'teryx, Diesel), con días de supply entre 480 y 2,160, stock para varios años al ritmo actual de venta. Dead Stock acumula $3.51M en 13,388 SKUs y Overstock otros $5.29M. La distribución de los estados cambia con la versión de thresholds dinámicos (percentiles p10/p25/p75 sobre el catálogo actual): los cortes se adaptan automáticamente a la velocidad de ventas del dataset sintético en vez de usar valores absolutos que dejarían casi todo en Overstock. La lectura de negocio que sobrevive al cambio de metodología: $8.8M en capital parado entre las dos categorías no-healthy, concentrado en outerwear premium.
+**Lectura:** el top-10 está dominado por outerwear premium (North Face, Woolrich, Nobis), con días de supply entre 945 y 2,070 para los que tienen velocidad de venta, y cero ventas en 90 días para los cuatro Dead Stock del ranking. Dead Stock acumula $3.61M en 13,401 SKUs; Overstock $1.64M en 3,556 SKUs; At Risk $963k en 3,638 SKUs; Reorder Now $212k en 1,152 SKUs. Con thresholds dinámicos la distribución de estados queda calibrada al catálogo real: Healthy (7,302 SKUs, $2.43M) incluye también stock que rota bien pero tiene días de supply en el rango medio del mercado. La lectura de negocio que sobrevive: $6.4M en capital no-healthy (Dead + Overstock + At Risk + Reorder), concentrado en outerwear de temporada.
 
 Archivo completo: [`sql_queries/05_inventory_health.sql`](sql_queries/05_inventory_health.sql)
 
@@ -531,10 +531,10 @@ Archivo completo: [`sql_queries/06_product_affinity.sql`](sql_queries/06_product
 ### Hallazgos
 
 - El negocio creció 3.5x YoY en revenue (abril 2025 → abril 2026 en run-rate diario normalizado) y el AOV se mantuvo plano en $85 ± $5 a lo largo de los últimos 12 meses. Todo el upside viene de volumen de órdenes, no de ticket.
-- La retención M1 subió de 2.90% (cohorte abril 2025) a 9.00% (cohorte febrero 2026, último mes con M1 maduro). Un z-test sobre cohortes maduras da +1.91 pp de mejora con IC 95% [+1.55, +2.27] y p-value ≈ 0: el rebote es real, no ruido de muestreo. El cuello sigue siendo la primera recompra; M2-M6 es plano en 3-6%.
+- La retención M1 subió de 5.00% (cohorte abril 2025) a 11.94% (cohorte febrero 2026, último mes con M1 maduro). El trend test WLS ponderado por tamaño de cohorte confirma una pendiente positiva significativa mes a mes; M2-M6 se mantiene plano en 3-9%. El cuello sigue siendo la primera recompra.
 - El leak más grande del funnel está en cart → purchase: 58% abandona el carrito contra 37% que abandona antes de agregarlo. Checkout pesa más que PDP en términos de tasa de mejora alcanzable.
 - Champions (16%) concentra 31% del revenue. Cannot Lose son 917 clientes con avg monetary $291 (el más alto de toda la matriz) y 1,332 días sin comprar. Reactivación target total (At Risk + Cannot Lose + Hibernating): 17,627 clientes, $2.61M de valor histórico.
-- $8.8M de capital estancado entre Overstock ($5.29M, 15,617 SKUs) y Dead Stock ($3.51M, 13,388 SKUs), concentrado en outerwear premium (North Face, Canada Goose, Arc'teryx). Los thresholds por default sobreclasifican dado el ritmo de ventas sintético: la cifra es real, la taxonomía "0 SKUs en Reorder Now" no lo es.
+- $6.4M de capital no-healthy: Dead Stock ($3.61M, 13,401 SKUs), Overstock ($1.64M, 3,556 SKUs), At Risk ($963k, 3,638 SKUs), Reorder Now ($212k, 1,152 SKUs). Con thresholds dinámicos la distribución es accionable: los 1,152 SKUs en Reorder Now son los que requieren reposición inmediata según la velocidad relativa del propio catálogo.
 - El dataset no sostiene una conclusión de market basket. Max co-ocurrencia de cualquier par = 2 sobre 61,222 pares observados. Cualquier recomendación de bundle basada en este dataset sería ruido.
 
 ### Recomendaciones
@@ -542,7 +542,7 @@ Archivo completo: [`sql_queries/06_product_affinity.sql`](sql_queries/06_product
 - Priorizar un experimento A/B en checkout (métodos de pago, shipping thresholds, guest checkout) antes que en PDP. El leak del 58% ahí tiene 1.5x el margen de mejora en tasa que el paso anterior.
 - Armar una cola CRM con los 917 Cannot Lose como prioridad absoluta, At Risk (5,259) como segunda ola. Presupuesto anclado en $267k de valor histórico sólo de Cannot Lose.
 - Investigar por qué las cohortes de agosto-septiembre 2025 (retención M1 de 2.8-3.5%) tocaron el piso antes del rebote. Si el driver fue un canal específico, apagarlo; si fue cambio de producto, documentarlo para no repetirlo.
-- Liquidar los top-100 SKUs de outerwear premium con >1,000 días de supply. Recortar el PO del próximo trimestre en esas categorías. El capital recuperado financia merchandising en las categorías en las que sí hay velocity.
+- Liquidar los top SKUs de outerwear premium con >1,800 días de supply (Woolrich, Nobis, North Face). Revisar los 1,152 SKUs en Reorder Now para que no se queden sin stock al ritmo actual. El capital recuperado de Dead Stock ($3.61M) financia reposición en las categorías con velocity.
 - No tomar decisiones de bundle ni cross-sell basadas en Q6. Re-correr sobre data real o dataset mayor antes de llevarlo a merchandising.
 
 ## Dashboard
