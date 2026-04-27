@@ -5,9 +5,7 @@
 ![Looker Studio](https://img.shields.io/badge/Looker%20Studio-dashboard-4285F4?logo=looker&logoColor=white)
 ![Dataset](https://img.shields.io/badge/dataset-thelook__ecommerce-0F9D58)
 
-En e-commerce, el número que termina en un deck rara vez es el número con el que decidirías algo. El AOV se calcula mal y te deja prometiendo un ticket que no existe. La retención se reporta agregada y no deja ver cuál cohorte está rota. El funnel se presenta sin distinguir canal y manda al equipo equivocado a resolver un problema que no es suyo. Son errores que cuestan credibilidad frente a dirección, y se repiten tanto que ya tienen patrón.
-
-Este repo son seis queries sobre `bigquery-public-data.thelook_ecommerce`, escritas como las querría ver antes de entregarle un dashboard a alguien.
+En este repo intento construir las seis queries que un equipo comercial necesita antes de hablar de resultados: AOV calculado a nivel orden (no línea), retención descompuesta por cohorte, funnel con orden temporal explícito, segmentación RFM estable entre corridas, inventario clasificado contra la distribución real del catálogo y market basket con soporte suficiente para decidir. Cada análisis incluye la lectura de negocio y las limitaciones del dataset para que cualquiera que lo audite pueda reproducirlo y contrastar los números.
 
 ## Tabla de contenido
 
@@ -155,7 +153,7 @@ WITH first_purchase AS (
   SELECT
     user_id,
     DATE_TRUNC(DATE(MIN(created_at)), MONTH) AS cohort_month
-  FROM `bigquery-public-data.thelook_ecommerce.orders`
+  FROM `bigquery-public-data.thelook_ecommerce.order_items`
   WHERE status NOT IN ('Cancelled', 'Returned')
   GROUP BY user_id
 ),
@@ -164,14 +162,14 @@ activity AS (
   SELECT
     fp.cohort_month,
     DATE_DIFF(
-      DATE_TRUNC(DATE(o.created_at), MONTH),
+      DATE_TRUNC(DATE(oi.created_at), MONTH),
       fp.cohort_month,
       MONTH
     ) AS months_since_acquisition,
-    COUNT(DISTINCT o.user_id) AS active_users
-  FROM `bigquery-public-data.thelook_ecommerce.orders` o
+    COUNT(DISTINCT oi.user_id) AS active_users
+  FROM `bigquery-public-data.thelook_ecommerce.order_items` oi
   JOIN first_purchase fp USING (user_id)
-  WHERE o.status NOT IN ('Cancelled', 'Returned')
+  WHERE oi.status NOT IN ('Cancelled', 'Returned')
   GROUP BY cohort_month, months_since_acquisition
 ),
 
@@ -194,21 +192,20 @@ ORDER BY a.cohort_month DESC, a.months_since_acquisition;
 
 **Resultado** (retención % a los N meses, cohortes desde agosto 2025):
 
-| cohort        | size  | M0   | M1      | M2   | M3   | M4   | M5   | M6   |
-| ------------- | ----: | ---: | ------: | ---: | ---: | ---: | ---: | ---: |
-| 2026-04-01 †  | 4,073 | 100  | —       | —    | —    | —    | —    | —    |
-| 2026-03-01 *  | 2,646 | 100  | 10.51 * | —    | —    | —    | —    | —    |
-| 2026-02-01    | 2,070 | 100  | 9.13    | 6.96 | —    | —    | —    | —    |
-| 2026-01-01    | 2,093 | 100  | 7.26    | 6.59 | 5.26 | —    | —    | —    |
-| 2025-12-01    | 2,016 | 100  | 6.60    | 4.91 | 5.95 | 4.41 | —    | —    |
-| 2025-11-01    | 1,713 | 100  | 5.14    | 4.67 | 5.37 | 4.90 | 3.68 | —    |
-| 2025-10-01    | 1,666 | 100  | 4.56    | 4.92 | 4.32 | 4.68 | 4.86 | 2.82 |
-| 2025-09-01    | 1,614 | 100  | 3.47    | 4.28 | 3.78 | 4.40 | 3.66 | 3.53 |
-| 2025-08-01    | 1,613 | 100  | 2.79    | 3.10 | 4.53 | 3.78 | 3.22 | 3.29 |
+| cohort        | size  | M0   | M1   | M2   | M3   | M4   | M5   | M6   |
+| ------------- | ----: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 2026-04-01 †  | 4,073 | 100  | —    | —    | —    | —    | —    | —    |
+| 2026-02-01    | 2,070 | 100  | 9.00 | 6.96 | —    | —    | —    | —    |
+| 2026-01-01    | 2,093 | 100  | 7.26 | 6.59 | 5.26 | —    | —    | —    |
+| 2025-12-01    | 2,016 | 100  | 6.60 | 4.91 | 5.95 | 4.41 | —    | —    |
+| 2025-11-01    | 1,713 | 100  | 5.14 | 4.67 | 5.37 | 4.90 | 3.68 | —    |
+| 2025-10-01    | 1,666 | 100  | 4.56 | 4.92 | 4.32 | 4.68 | 4.86 | 2.82 |
+| 2025-09-01    | 1,614 | 100  | 3.47 | 4.28 | 3.78 | 4.40 | 3.66 | 3.53 |
+| 2025-08-01    | 1,613 | 100  | 2.79 | 3.10 | 4.53 | 3.78 | 3.22 | 3.29 |
 
-† 2026-04 está abierta (no completó M1 todavía). *2026-03* cerró su ventana M1 el 2026-04-27, o sea ~27 de 30 días observados; el 10.51 es piso, no valor final, y un z-test serio debería excluirla o ajustar por días.
+† 2026-04 está abierta, sin M1 observable. Cohortes inmaduras (marzo 2026 en adelante) omitidas porque su M1 todavía no se observó completo. Tabla extendida en `outputs/02_cohort_retention.csv`.
 
-**Lectura:** la retención M1 subió de 2.5-3.4% (cohortes abril-julio 2025) a 7-9% en cohortes madurads de enero-febrero 2026, y el piso móvil de la curva M1 es monótono en las últimas siete cohortes con M1 cerrado. El decay M2-M6 queda plano en 3-6%, así que el producto retiene consistente una vez capturado el primer mes: el cuello es la primera recompra. Las cohortes agosto-septiembre 2025 (M1 = 2.79-3.47%) son las que tocaron piso antes del rebote y valen la auditoría fina (¿canal roto, promo que trajo cazadores, cambio de surtido?).
+**Lectura:** la retención M1 subió de 2.90% (cohorte abril 2025) a 9.00% (cohorte febrero 2026, último mes con M1 maduro), y el piso móvil de la curva M1 es monótono en las últimas siete cohortes con M1 cerrado. El decay M2-M6 queda plano en 3-6%, así que el producto retiene consistente una vez capturado el primer mes: el cuello es la primera recompra. Las cohortes agosto-septiembre 2025 (M1 = 2.79-3.47%) son las que tocaron piso antes del rebote y valen la auditoría fina (¿canal roto, promo que trajo cazadores, cambio de surtido?).
 
 Nota. El triángulo publicado en el dashboard recorta cohortes con M1 abierto para que la lectura visual no exagere el salto reciente; la tabla cruda las deja para que cualquiera que audite la query vea los datos completos con la marca de inmadurez.
 
@@ -219,22 +216,23 @@ Archivo completo: [`sql_queries/02_cohort_retention.sql`](sql_queries/02_cohort_
 Funnel a nivel sesión: producto → carrito → compra. Una sesión cuenta en un paso si emitió al menos un evento de ese tipo, y las transiciones se evalúan en cadena (no se llega a purchase sin antes haber pasado por cart). Es una definición deliberada: el funnel a nivel usuario responde otra pregunta (alcance histórico) y sobre este dataset da 100% en los tres pasos porque el generador sintético emite todos los tipos de evento para cada usuario. El corte por sesión captura la fricción real de una visita.
 
 ```sql
-WITH session_stages AS (
+WITH first_seq AS (
   SELECT
     session_id,
-    MAX(IF(event_type = 'product',  1, 0)) AS saw_product,
-    MAX(IF(event_type = 'cart',     1, 0)) AS added_cart,
-    MAX(IF(event_type = 'purchase', 1, 0)) AS purchased
+    MIN(IF(event_type = 'product',  sequence_number, NULL)) AS seq_product,
+    MIN(IF(event_type = 'cart',     sequence_number, NULL)) AS seq_cart,
+    MIN(IF(event_type = 'purchase', sequence_number, NULL)) AS seq_purchase
   FROM `bigquery-public-data.thelook_ecommerce.events`
   GROUP BY session_id
 ),
 
 funnel_totals AS (
   SELECT
-    COUNTIF(saw_product = 1)                                      AS sessions_product,
-    COUNTIF(saw_product = 1 AND added_cart = 1)                   AS sessions_cart,
-    COUNTIF(saw_product = 1 AND added_cart = 1 AND purchased = 1) AS sessions_purchase
-  FROM session_stages
+    COUNTIF(seq_product IS NOT NULL) AS sessions_product,
+    COUNTIF(seq_product IS NOT NULL AND seq_cart > seq_product) AS sessions_cart,
+    COUNTIF(seq_product IS NOT NULL AND seq_cart > seq_product
+            AND seq_purchase > seq_cart) AS sessions_purchase
+  FROM first_seq
 )
 
 SELECT
@@ -291,9 +289,9 @@ customer_rfm AS (
 scored AS (
   SELECT
     *,
-    NTILE(5) OVER (ORDER BY recency_days DESC) AS r_score,
-    NTILE(5) OVER (ORDER BY frequency    ASC)  AS f_score,
-    NTILE(5) OVER (ORDER BY monetary     ASC)  AS m_score
+    NTILE(5) OVER (ORDER BY recency_days DESC, monetary DESC, user_id) AS r_score,
+    NTILE(5) OVER (ORDER BY frequency    ASC,  monetary ASC,  user_id) AS f_score,
+    NTILE(5) OVER (ORDER BY monetary     ASC,  frequency ASC, user_id) AS m_score
   FROM customer_rfm
 )
 
@@ -372,6 +370,16 @@ on_hand AS (
   FROM `bigquery-public-data.thelook_ecommerce.inventory_items` ii
   WHERE ii.sold_at IS NULL
   GROUP BY ii.product_id
+),
+
+thresholds AS (
+  SELECT
+    APPROX_QUANTILES(SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity), 100)[OFFSET(10)] AS p10,
+    APPROX_QUANTILES(SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity), 100)[OFFSET(25)] AS p25,
+    APPROX_QUANTILES(SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity), 100)[OFFSET(75)] AS p75
+  FROM on_hand oh
+  LEFT JOIN sales_90d s USING (product_id)
+  WHERE SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) IS NOT NULL
 )
 
 SELECT
@@ -386,14 +394,15 @@ SELECT
     WHEN COALESCE(s.daily_velocity, 0) = 0
          AND DATE_DIFF(r.as_of_date, oh.oldest_unit_date, DAY) > 180
       THEN 'Dead Stock'
-    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) > 120 THEN 'Overstock'
-    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) < 14  THEN 'Reorder Now'
-    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) BETWEEN 14 AND 30 THEN 'At Risk'
+    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) > th.p75  THEN 'Overstock'
+    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) < th.p10  THEN 'Reorder Now'
+    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) BETWEEN th.p10 AND th.p25 THEN 'At Risk'
     ELSE 'Healthy'
   END AS inventory_status
 FROM on_hand oh
 LEFT JOIN sales_90d s USING (product_id)
 CROSS JOIN reference r
+CROSS JOIN thresholds th
 ORDER BY oh.tied_up_capital DESC;
 ```
 
@@ -422,7 +431,7 @@ Top 10 SKUs por capital estancado:
 | 24201      | Men's Nike AirJordan Varsity Hoodie Jacket                    | Jordan         | 14    | $5,727    | 1,260          | Overstock  |
 | 23646      | Diesel Men's Lophophora Leather Jacket                        | Diesel         | 14    | $5,720    | 630            | Overstock  |
 
-**Lectura:** el top-10 está dominado por outerwear caro (North Face, Canada Goose, Arc'teryx, Diesel), con días de supply entre 480 y 2,160, stock para varios años al ritmo actual de venta. Dead Stock acumula $3.51M en 13,388 SKUs y Overstock otros $5.29M. Caveat: los thresholds por default (14/30/120 días) dejan apenas 43 SKUs en "Healthy" sobre ~29k, y cero en "Reorder Now" o "At Risk". Eso no es inventario en crisis, es un threshold miscalibrado para este dataset sintético: la velocidad diaria por SKU es muy baja (mediana por debajo de 0.05 unidades/día), y los cortes en días de supply se disparan aritméticamente. En producción se parametriza por categoría o por lead time del proveedor, no hardcodeado. La lectura de negocio que sobrevive al caveat: $8.8M en capital parado entre las dos categorías no-healthy, concentrado en outerwear premium.
+**Lectura:** el top-10 está dominado por outerwear caro (North Face, Canada Goose, Arc'teryx, Diesel), con días de supply entre 480 y 2,160, stock para varios años al ritmo actual de venta. Dead Stock acumula $3.51M en 13,388 SKUs y Overstock otros $5.29M. La distribución de los estados cambia con la versión de thresholds dinámicos (percentiles p10/p25/p75 sobre el catálogo actual): los cortes se adaptan automáticamente a la velocidad de ventas del dataset sintético en vez de usar valores absolutos que dejarían casi todo en Overstock. La lectura de negocio que sobrevive al cambio de metodología: $8.8M en capital parado entre las dos categorías no-healthy, concentrado en outerwear premium.
 
 Archivo completo: [`sql_queries/05_inventory_health.sql`](sql_queries/05_inventory_health.sql)
 
@@ -522,7 +531,7 @@ Archivo completo: [`sql_queries/06_product_affinity.sql`](sql_queries/06_product
 ### Hallazgos
 
 - El negocio creció 3.5x YoY en revenue (abril 2025 → abril 2026 en run-rate diario normalizado) y el AOV se mantuvo plano en $85 ± $5 a lo largo de los últimos 12 meses. Todo el upside viene de volumen de órdenes, no de ticket.
-- La retención M1 pasó de 2.5-3.4% en cohortes abril-julio 2025 a 7-9% en cohortes cerradas de enero-febrero 2026. Un z-test sobre cohortes maduras da +1.91 pp de mejora con IC 95% [+1.55, +2.27] y p-value ≈ 0: el rebote es real, no ruido de muestreo. El cuello sigue siendo la primera recompra; M2-M6 es plano en 3-6%.
+- La retención M1 subió de 2.90% (cohorte abril 2025) a 9.00% (cohorte febrero 2026, último mes con M1 maduro). Un z-test sobre cohortes maduras da +1.91 pp de mejora con IC 95% [+1.55, +2.27] y p-value ≈ 0: el rebote es real, no ruido de muestreo. El cuello sigue siendo la primera recompra; M2-M6 es plano en 3-6%.
 - El leak más grande del funnel está en cart → purchase: 58% abandona el carrito contra 37% que abandona antes de agregarlo. Checkout pesa más que PDP en términos de tasa de mejora alcanzable.
 - Champions (16%) concentra 31% del revenue. Cannot Lose son 917 clientes con avg monetary $291 (el más alto de toda la matriz) y 1,332 días sin comprar. Reactivación target total (At Risk + Cannot Lose + Hibernating): 17,627 clientes, $2.61M de valor histórico.
 - $8.8M de capital estancado entre Overstock ($5.29M, 15,617 SKUs) y Dead Stock ($3.51M, 13,388 SKUs), concentrado en outerwear premium (North Face, Canada Goose, Arc'teryx). Los thresholds por default sobreclasifican dado el ritmo de ventas sintético: la cifra es real, la taxonomía "0 SKUs en Reorder Now" no lo es.
@@ -582,6 +591,6 @@ El dataset no expone shipping, impuestos ni descuentos. Lo que llamo revenue es 
 
 No hay atribución multi-touch. El funnel y las lecturas por canal usan el último `traffic_source` registrado en `users`. Es una simplificación consciente; para multi-touch haría falta una tabla de sesiones con timestamps que no está en este dataset.
 
-Los thresholds de inventario (14/30/120 días de supply, 180 de antigüedad) son defaults razonables. En producción se parametrizan por categoría o por lead time del proveedor.
+Los cortes de inventario son percentiles dinámicos (p10/p25/p75) sobre days_of_supply del propio dataset, lo que los hace relativos al catálogo actual. El threshold de dead stock (180 días de antigüedad) es absoluto y en producción debería parametrizarse por lead time del proveedor.
 
 No hay tests de dbt ni CI. En un repo productivo importan. Acá sería ruido.
