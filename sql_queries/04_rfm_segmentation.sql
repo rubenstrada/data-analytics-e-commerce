@@ -25,6 +25,14 @@
    - Frequency: más órdenes = mejor -> NTILE ASC.
    - Monetary : más gasto = mejor  -> NTILE ASC.
 
+   Tie-break en NTILE
+   ------------------
+   Con miles de clientes en frequency=1, los NTILE sin tie-break no son
+   determinísticos: el orden de los empates puede cambiar entre corridas y
+   la distribución de segmentos se mueve sola. Se agrega user_id como
+   criterio de desempate final en los tres scores para que la matriz sea
+   estable entre ejecuciones sucesivas sobre el mismo snapshot.
+
    Fecha de referencia
    -------------------
    "Hoy" se ancla a MAX(created_at) del propio dataset. Esto mantiene la
@@ -63,12 +71,9 @@ scored AS (
     recency_days,
     frequency,
     monetary,
-    -- Los más recientes reciben el 5
-    NTILE(5) OVER (ORDER BY recency_days DESC)  AS r_score,
-    -- Empates en frequency=1 van a inflar los buckets bajos, lo cual es
-    -- realista: un retailer típico tiene mayoría de one-time buyers.
-    NTILE(5) OVER (ORDER BY frequency    ASC)   AS f_score,
-    NTILE(5) OVER (ORDER BY monetary     ASC)   AS m_score
+    NTILE(5) OVER (ORDER BY recency_days DESC, monetary DESC, user_id) AS r_score,
+    NTILE(5) OVER (ORDER BY frequency    ASC,  monetary ASC,  user_id) AS f_score,
+    NTILE(5) OVER (ORDER BY monetary     ASC,  frequency ASC, user_id) AS m_score
   FROM customer_rfm
 ),
 
