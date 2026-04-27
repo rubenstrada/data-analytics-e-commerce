@@ -9,10 +9,17 @@
 
    Metodología
    -----------
-   Una sesión cuenta en un paso si produjo al menos un evento de ese tipo
-   durante la misma sesión. Las transiciones se evalúan de forma
-   acumulativa: una sesión llega a "cart" solo si también vio producto, y
-   llega a "purchase" solo si además sumó al carrito.
+   Una sesión cuenta en un paso si emitió al menos un evento de ese tipo
+   en el orden correcto según sequence_number: cart debe ocurrir después
+   de product, y purchase después de cart. Se toma el primer sequence_number
+   de cada tipo por sesión; la transición es válida solo si el número
+   siguiente es estrictamente mayor. Esto es acumulativo en sentido
+   temporal, no solo coexistencia de eventos en la misma sesión.
+
+   La versión anterior usaba MAX(IF(...)) por sesión y contaba coexistencia
+   sin importar el orden. Eso clasificaba como "llegó al carrito" a sesiones
+   donde el evento cart apareció antes que product (posible en logs
+   sintéticos con sequence_number desordenado).
 
    Por qué session-level y no user-level
    -------------------------------------
@@ -31,24 +38,25 @@
    - end_to_end_conv_pct = la métrica que un director quiere al día siguiente.
 ============================================================================= */
 
-WITH session_stages AS (
-  -- Una fila por sesión con flags de qué stages tocó
+WITH first_seq AS (
+  -- Primera ocurrencia de cada tipo de evento por sesión (sequence_number más bajo)
   SELECT
     session_id,
-    MAX(IF(event_type = 'product',  1, 0)) AS saw_product,
-    MAX(IF(event_type = 'cart',     1, 0)) AS added_cart,
-    MAX(IF(event_type = 'purchase', 1, 0)) AS purchased
+    MIN(IF(event_type = 'product',  sequence_number, NULL)) AS seq_product,
+    MIN(IF(event_type = 'cart',     sequence_number, NULL)) AS seq_cart,
+    MIN(IF(event_type = 'purchase', sequence_number, NULL)) AS seq_purchase
   FROM `bigquery-public-data.thelook_ecommerce.events`
   GROUP BY session_id
 ),
 
 funnel_totals AS (
-  -- Conteo acumulativo: cada stage exige haber pasado por los anteriores
+  -- Acumulativo temporal: cart debe seguir a product; purchase debe seguir a cart
   SELECT
-    COUNTIF(saw_product = 1)                                           AS sessions_product,
-    COUNTIF(saw_product = 1 AND added_cart = 1)                        AS sessions_cart,
-    COUNTIF(saw_product = 1 AND added_cart = 1 AND purchased = 1)      AS sessions_purchase
-  FROM session_stages
+    COUNTIF(seq_product IS NOT NULL) AS sessions_product,
+    COUNTIF(seq_product IS NOT NULL AND seq_cart > seq_product) AS sessions_cart,
+    COUNTIF(seq_product IS NOT NULL AND seq_cart > seq_product
+            AND seq_purchase > seq_cart) AS sessions_purchase
+  FROM first_seq
 )
 
 SELECT
