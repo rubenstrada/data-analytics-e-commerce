@@ -1,5 +1,4 @@
 # outputs locales de las queries
-outputs/
 out/
 
 # credenciales GCP (nunca van al repo)
