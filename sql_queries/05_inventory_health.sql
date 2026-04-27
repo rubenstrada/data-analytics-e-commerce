@@ -28,9 +28,16 @@
      4. Estima CAPITAL ESTANCADO (unidades * costo unitario). El decisor
         ordena por dólares, no por unidades.
 
-   Los thresholds (14 / 30 / 120 días, 180 días de antigüedad) son defaults
-   razonables; en un caso real se parametrizan por categoría o por lead
-   time del proveedor.
+   Thresholds dinámicos (percentiles del catálogo)
+   ------------------------------------------------
+   Los cortes fijos anteriores (14 / 30 / 120 días de supply) dejaban 57
+   SKUs en Healthy sobre ~29k porque la mediana de daily_velocity en este
+   dataset sintético es muy baja. En lugar de hardcodear, se calculan
+   APPROX_QUANTILES sobre la distribución de days_of_supply del propio
+   catálogo: p10, p25, p75. Los buckets son RELATIVOS al catálogo actual,
+   así que la distribución de estados queda estable aunque cambie la
+   velocidad global de ventas. Dead Stock mantiene criterio absoluto (cero
+   ventas en 90d Y antigüedad > 180d) porque no tiene sentido relativizarlo.
 ============================================================================= */
 
 WITH reference AS (
@@ -50,6 +57,31 @@ sales_90d AS (
     AND DATE(oi.created_at) BETWEEN DATE_SUB(r.as_of_date, INTERVAL 90 DAY)
                                 AND r.as_of_date
   GROUP BY oi.product_id
+),
+
+-- Pre-cálculo de days_of_supply para derivar percentiles del catálogo
+pre_dos AS (
+  SELECT
+    ii.product_id,
+    COUNT(*)           AS units_on_hand,
+    MIN(DATE(ii.created_at)) AS oldest_unit_date,
+    COALESCE(s.daily_velocity, 0) AS daily_velocity,
+    SAFE_DIVIDE(COUNT(*), s.daily_velocity) AS days_of_supply
+  FROM `bigquery-public-data.thelook_ecommerce.inventory_items` ii
+  LEFT JOIN sales_90d s USING (product_id)
+  WHERE ii.sold_at IS NULL
+  GROUP BY ii.product_id, s.daily_velocity
+),
+
+-- Percentiles dinámicos sobre la distribución de days_of_supply del catálogo
+-- (solo SKUs que tienen velocidad > 0, para no contaminar con zeros infinitos)
+thresholds AS (
+  SELECT
+    APPROX_QUANTILES(days_of_supply, 100)[OFFSET(10)] AS p10,
+    APPROX_QUANTILES(days_of_supply, 100)[OFFSET(25)] AS p25,
+    APPROX_QUANTILES(days_of_supply, 100)[OFFSET(75)] AS p75
+  FROM pre_dos
+  WHERE days_of_supply IS NOT NULL
 ),
 
 -- Inventario on-hand: cada fila de inventory_items es UNA unidad física
@@ -85,24 +117,26 @@ SELECT
   -- NULL si velocidad es cero para evitar división por cero.
   ROUND(SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity), 1)      AS days_of_supply,
   CASE
-    -- Dead Stock: 0 ventas en 90d Y el inventario ya está maduro (>180d)
+    -- Dead Stock: 0 ventas en 90d Y el inventario ya está maduro (>180d).
+    -- Criterio absoluto: no tiene sentido relativizarlo al catálogo.
     WHEN COALESCE(s.daily_velocity, 0) = 0
          AND DATE_DIFF(r.as_of_date, oh.oldest_unit_date, DAY) > 180
       THEN 'Dead Stock'
-    -- Overstock: vende poco, pero más de 120 días de supply acumulados
-    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) > 120
+    -- Overstock: por encima del p75 de days_of_supply del catálogo
+    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) > th.p75
       THEN 'Overstock'
-    -- Reorder Now: menos de 14 días de supply, acción inmediata
-    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) < 14
+    -- Reorder Now: por debajo del p10 (cola baja de la distribución)
+    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) < th.p10
       THEN 'Reorder Now'
-    -- At Risk: 14-30 días, vigilar de cerca
-    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) BETWEEN 14 AND 30
+    -- At Risk: entre p10 y p25
+    WHEN SAFE_DIVIDE(oh.units_on_hand, s.daily_velocity) BETWEEN th.p10 AND th.p25
       THEN 'At Risk'
-    -- Healthy: 30-120 días de supply
+    -- Healthy: entre p25 y p75
     ELSE 'Healthy'
   END AS inventory_status
 FROM on_hand oh
 LEFT JOIN sales_90d s USING (product_id)
 CROSS JOIN reference r
+CROSS JOIN thresholds th
 -- Orden por capital estancado: para el CFO, el ranking que importa
 ORDER BY oh.tied_up_capital DESC;
